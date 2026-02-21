@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لحظة | وقف</title>
+<link rel="icon" href="https://fav.farm/❤️" />
+<style>
+@font-face {
+  font-family: 'ArabicThuluth';
+  src: url('https://cdn.jsdelivr.net/gh/alif-type/thuluth/Thuluth-Regular.ttf') format('truetype');
+}
+
+body {
+  margin: 0; min-height: 100vh; width: 100vw; display: flex; flex-direction: column;
+  justify-content: center; align-items: center; background: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%);
+  font-family: 'ArabicThuluth', serif; color: white; text-align: center; overflow: hidden; position: relative;
+}
+
+#canvas-stars { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.content-wrapper { position: relative; z-index: 10; width: 100%; }
+
+h1 { font-size: clamp(3.5rem, 18vw, 7rem); color: #d4af37; margin-bottom: 5vh; text-shadow: 0 0 20px rgba(212, 175, 55, 0.3); transition: 0.5s; }
+
+#options { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+button.option-btn {
+  padding: 18px 30px; width: 80%; max-width: 350px; font-size: clamp(1.3rem, 5vw, 1.8rem);
+  background: rgba(255, 255, 255, 0.05); color: #ffffff; border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 50px; cursor: pointer; transition: 0.3s; font-family: 'ArabicThuluth', serif; backdrop-filter: blur(5px);
+}
+
+#adviceBox { font-size: clamp(1.1rem, 5vw, 1.7rem); color: #e0e0e0; max-width: 85%; margin: 2vh auto; min-height: 120px; line-height: 1.6; display: none; white-space: pre-line; }
+
+/* أزرار التنقل - الترتيب الصحيح */
+.navigation-btns { display: none; justify-content: center; gap: 15px; margin-bottom: 25px; }
+.nav-btn { padding: 10px 20px; font-size: 1.1rem; border-radius: 20px; cursor: pointer; background: rgba(212, 175, 55, 0.1); color: #d4af37; border: 1px solid #d4af37; font-family: 'ArabicThuluth'; }
+
+.action-btns { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+#backBtn, #doneBtn { padding: 12px 25px; width: 220px; font-size: 1.2rem; border-radius: 30px; cursor: pointer; font-family: 'ArabicThuluth', serif; display: none; background: none; transition: 0.3s; }
+#backBtn { color: #888; border: 1px solid #444; }
+#doneBtn { color: #d4af37; border: 1px solid #d4af37; }
+</style>
+</head>
+<body>
+
+<canvas id="canvas-stars"></canvas>
+
+<div class="content-wrapper">
+    <h1 id="mainTitle">وَقْف</h1>
+    
+    <div id="options">
+      <button class="option-btn" onclick="startAdvice('angry')">معصب</button>
+      <button class="option-btn" onclick="startAdvice('mistake')">بفكر أعمل غلطة</button>
+      <button class="option-btn" onclick="startAdvice('sad')">مخنوق</button>
+    </div>
+
+    <div id="adviceBox"></div>
+    
+    <div class="navigation-btns" id="navGroup">
+        <button class="nav-btn" onclick="nextAdvice()">النصيحة التالية</button>
+        <button class="nav-btn" onclick="prevAdvice()">النصيحة السابقة</button>
+    </div>
+
+    <div class="action-btns">
+        <button id="doneBtn" onclick="finishAdvice()">إذا خلصت اضغط هنا</button>
+        <button id="backBtn" onclick="goBack()">رجوع للقائمة</button>
+    </div>
+</div>
+
+<audio id="bgMusic" loop>
+  <source src="https://assets.mixkit.co/active_storage/sfx/2513/2513-preview.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+const database = {
+  angry: [
+    `اسمع، أنا وضعك هاد عارفه وحاسس فيه ومتاكد إنو معك الحق مليون بالمية تعمل كلشي فكرت فيه، بس أي تصرف بالوقت الحالي رح يخليك تندم كثير.\n\nفـ روّقققق وكل اشي بنحل وأنت رايق.`,
+    "الرد في وقت الغضب سقطة، انتظر حتى يبرد قلبك ثم قرر، الحكمة في الصمت الآن.",
+    "تذكر أنك تملك الحق، فلا تضيعه بكلمة تندم عليها لاحقاً. خذ نفساً عميقاً.",
+    "كل شيء سيمضي، لكن كلامك سيبقى عالقاً.. لا تجعل الغضب يقودك.",
+    "الهدوء ليس ضعفاً، الهدوء هو القمة في التحكم بالذات. لا تسمح لموقف أن يكسر هدوءك.",
+    "غضبك الآن نار، والنار لا تطفئها نار.. ابرد واسمح لعقلك أن يستلم القيادة.",
+    "صدقني، بعد ساعة من الآن رح تطلع على الموقف وتضحك إنك كنت رح تعصب. وفر طاقتك.",
+    "اللي معصبك هسا رح يروح، بس الندم رح يضل. خليك أكبر من الموقف.",
+    "نفس واحد عميق.. عد للعشرة.. الدنيا ما بتستاهل تحرق دمك عشانها.",
+    "تذكر: من ترك شيئاً لله عوضه الله خيراً منه. اترك الغضب لوجه الله وشوف الراحة."
+  ],
+  mistake: [
+    `شوف، أنا معك، والكل مرق ورح يمرق بشعورك.\nوبأكدلك وبوعدك: إذا عملت اللي براسك، رح تندم وتظل حاسس بتأنيب ضمير.\n\nأنا هون عشان أخليك تكون أقوى. فكر بالموضوع أكثر.. وإذا بتحب، اكتب شو كنت رح تعمل على ورقة، وارجع لها كمان نص ساعة وشوف كيف رح تشكرني.`,
+    "أنت أقوى من هذه الرغبة اللحظية، تجاوز هذه اللحظة وستشكر نفسك غداً.",
+    "القرار الذي يُبنى على لحظة ضعف، يتبعه عمر من الندم. تراجع الآن.",
+    "لا تجعل غلطة واحدة تهدم كل ما بنيته. فكر في مستقبلك وفي أحبابك.",
+    "تخيل شعورك بالفخر بعد ساعة لو سيطرت على نفسك الآن.. هذا هو الفوز الحقيقي.",
+    "كل بني آدم خطاء، بس الذكي اللي بوقف الغلط قبل ما يصير. أنت ذكي، وقف!",
+    "اللي ببالك هسا هو فخ. لا توقع فيه. ارجع خطوة لورا وشوف الصورة كاملة.",
+    "تذكر إنو 'الله رقيب'. هالجملة لحالها كفيلة تخليك تغير مسارك للأفضل.",
+    "نفسك عم توهمك إنو هاد هو الحل، بس قلبك عارف إنو غلط. اسمع لقلبك.",
+    "ما في غلطة بتصلح وضع، الغلط دايماً بجر غلط. اقطع السلسلة هسا."
+  ],
+  sad: [
+    `شوف، كلنا عندنا ظروف ومواقف ما بتنتسى، والأغلبية أصلاً مستحيل ينسى.\nوممكن كمان تكون خنقتك بسبب خوف أو مرض، بس أنا بدي أحكيلك كم كلمة:\n\n"عمرها خنقتك ما بتوصلك لنتيجة".\nكل شي بدو مواجهة، إذا ما واجهت طول عمرك رح تضل مخنوق. استعن بالله وقوّي قلبك.`,
+    "لا بأس أن تحزن، لكن لا تغرق. تذكر أن كل ضيق سيتبعه فرج، هذه سنة الحياة.",
+    "أنت لست وحدك، الله معك ونحن معك. الفرج أقرب مما تظن، فقط اصبر.",
+    "الخنقة هي طاقة محبوسة.. اخرج للريح، استنشق الهواء، وواجه ما يخيفك.",
+    "كل جرح سيُشفى، وكل دمعة ستجف. لا تسمح للحزن أن يطفئ نورك الجميل.",
+    "الدنيا ممر مش مستقر، والهم فيها ضيف. لا تكرم الضيف بزيادة، خليه يمر بسلام.",
+    "ارفع راسك للسما وقول 'يا رب'. هو الوحيد اللي عارف شو في جواتك ورح يريحك.",
+    "ممكن تكون هاد البلاء هو بداية لخير كبير إنت مش شايفه هسا. تفاءل.",
+    "لا تقسى على حالك، إنت بشر ومن حقك تتعب، بس مش من حقك تستسلم.",
+    "تذكر إنو بعد كل ليل في نهار، وبعد كل دمعة في ضحكة مخبية. استناها."
+  ]
+};
+
+let currentCategory = "";
+let currentIndex = 0;
+
+// --- إعادة الخلفية الذهبية المتحركة ---
+const canvas = document.getElementById('canvas-stars');
+const ctx = canvas.getContext('2d');
+let stars = [];
+function initStars() {
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    stars = [];
+    for(let i=0; i<80; i++) stars.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, size: Math.random()*1.5, speed: Math.random()*0.3});
+}
+function animate() {
+    ctx.clearRect(0,0, canvas.width, canvas.height);
+    ctx.fillStyle = 'rgba(212, 175, 55, 0.3)';
+    for(let s of stars) {
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI*2); ctx.fill();
+        s.y -= s.speed; if(s.y < 0) s.y = canvas.height;
+    }
+    requestAnimationFrame(animate);
+}
+initStars(); animate();
+
+// --- منطق العرض السريع ---
+function startAdvice(category) {
+    currentCategory = category;
+    currentIndex = 0;
+    document.getElementById("bgMusic").play().catch(() => {});
+    
+    document.getElementById("options").style.display = "none";
+    document.getElementById("mainTitle").style.opacity = "0.3";
+    document.getElementById("mainTitle").style.transform = "scale(0.8)";
+    
+    document.getElementById("adviceBox").innerText = database[currentCategory][currentIndex];
+    document.getElementById("adviceBox").style.display = "block";
+    document.getElementById("navGroup").style.display = "flex";
+    document.getElementById("backBtn").style.display = "block";
+    document.getElementById("doneBtn").style.display = "block";
+}
+
+function nextAdvice() {
+    currentIndex = (currentIndex + 1) % database[currentCategory].length;
+    document.getElementById("adviceBox").innerText = database[currentCategory][currentIndex];
+}
+
+function prevAdvice() {
+    currentIndex = (currentIndex - 1 + database[currentCategory].length) % database[currentCategory].length;
+    document.getElementById("adviceBox").innerText = database[currentCategory][currentIndex];
+}
+
+function goBack() {
+    // إرجاع القائمة بسرعة بدون تحديث الصفحة
+    document.getElementById("adviceBox").style.display = "none";
+    document.getElementById("navGroup").style.display = "none";
+    document.getElementById("backBtn").style.display = "none";
+    document.getElementById("doneBtn").style.display = "none";
+    
+    document.getElementById("options").style.display = "flex";
+    document.getElementById("mainTitle").style.opacity = "1";
+    document.getElementById("mainTitle").style.transform = "scale(1)";
+    document.getElementById("bgMusic").pause();
+}
+
+function finishAdvice() {
+    document.getElementById("navGroup").style.display = "none";
+    document.getElementById("adviceBox").innerText = `خذ نفس عميق وارتاح.. وارجعلي بأي وقت ❤️`;
+    document.getElementById("doneBtn").style.display = "none";
+}
+
+window.addEventListener('resize', initStars);
+</script>
+</body>
+</html>
